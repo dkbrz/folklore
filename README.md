@@ -1,5 +1,10 @@
 # Folklore
 
+Set `FLASK_SECRET_KEY` to the same persistent, random secret on every app
+worker. The app creates the `search_sessions` table at startup; the database
+user needs permission to create it on first deployment. Search sessions expire
+after one day of inactivity.
+
 ## MySQL search backend runbook
 
 ### 1) Apply the MySQL search schema
@@ -35,6 +40,12 @@ Use the Flask CLI to build the MySQL sentence index:
 ```bash
 flask search-index rebuild --truncate --batch-size 1000
 ```
+
+Rebuilds replace the index in one database transaction, so the old index stays
+available if rebuilding fails. A large rebuild can hold database locks and needs
+enough database space for the transaction. Edits made through the admin update
+the MySQL index in the same transaction. The `--truncate` option remains
+accepted for compatibility; every rebuild now replaces the full index.
 
 To index a single text by id:
 
