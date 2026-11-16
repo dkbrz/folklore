@@ -231,6 +231,36 @@ class CVideoView(EditorUpperFull):
     column_searchable_list = ('id', 'id_text', 'video')
 
 
+class CSVImportView(BaseView):
+    """Upload three CSV files in a single database transaction."""
+
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.has_roles('chief')
+
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(url_for('login'))
+
+    @expose('/', methods=['GET', 'POST'])
+    def index(self):
+        errors = []
+        count = None
+        mode = None
+        if request.method == 'POST':
+            from folklore_app.csv_import import parse_uploads, run_import, issue
+            try:
+                mode = request.form.get('mode')
+                if mode not in ('dry-run', 'commit'):
+                    issue(errors, 'upload', None, 'mode', 'Выберите проверку или импорт')
+                else:
+                    sources = parse_uploads(request.files, errors)
+                    if not errors:
+                        count = run_import(sources, errors, dry_run=(mode == 'dry-run'))
+            except Exception as exc:
+                db.session.rollback()
+                issue(errors, 'database', None, 'transaction', str(getattr(exc, 'orig', exc)))
+        return self.render('admin/csv_import.html', errors=errors, count=count, mode=mode)
+
+
 class SearchReindexView(BaseView):
     """Admin-only view for triggering a full search reindex.
 
@@ -317,6 +347,8 @@ def admin_views(admin):
         name='Переиндексация', endpoint='search_reindex',
         category='Метаданные'
     ))
+
+    admin.add_view(CSVImportView(name='Импорт CSV', endpoint='csv_import', category='Метаданные'))
 
     return admin
 

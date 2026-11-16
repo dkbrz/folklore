@@ -82,7 +82,7 @@ def create_app():
     application.config['TEMPLATES_AUTO_RELOAD'] = True
     application.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
     application.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    secret_key = os.environ.get('FLASK_SECRET_KEY')
+    secret_key = CONFIG.get('FLASK_SECRET_KEY')
     if not secret_key:
         raise RuntimeError('FLASK_SECRET_KEY must be set to the same value on every worker')
     application.secret_key = secret_key
